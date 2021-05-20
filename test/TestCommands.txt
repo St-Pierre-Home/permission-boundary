@@ -1,0 +1,5 @@
+aws s3api put-object --bucket stpierre-pb-2021 --key test.txt --body files/test.txt --tagging organization_guid=11a807b3-a96b-4a2d-bc23-ef9c3b2769b0
+
+aws s3api copy-object --copy-source stpierre-pb-2021/test.txt --key copy/test.txt --bucket stpierre-pb-2021 --tagging organization_guid=11a807b3-a96b-4a2d-bc23-ef9c3b2769b0
+
+aws s3api delete-object --bucket stpierre-pb-2021 --key test.txt
