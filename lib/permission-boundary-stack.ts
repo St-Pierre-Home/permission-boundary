@@ -21,7 +21,7 @@ export class PermissionBoundaryStack extends cdk.Stack {
         new PolicyStatement({
           effect: Effect.ALLOW,
           resources: ["*"],
-          actions: ["s3:*Object*", "s3:*List*"],
+          actions: ["s3:*Object*"],
           conditions: {
             StringEquals: {
               "s3:RequestObjectTag/organization_guid":
@@ -32,7 +32,7 @@ export class PermissionBoundaryStack extends cdk.Stack {
         new PolicyStatement({
           effect: Effect.ALLOW,
           resources: ["*"],
-          actions: ["s3:*Object*", "s3:*List*"],
+          actions: ["s3:*Object*"],
           conditions: {
             StringEquals: {
               "s3:ExistingObjectTag/organization_guid":
@@ -48,14 +48,13 @@ export class PermissionBoundaryStack extends cdk.Stack {
       actions: [
         "s3:GetObject",
         "s3:PutObject",
-        "s3:ListBucket",
         "s3:GetObjectTagging",
         "s3:PutObjectTagging",
         "s3:DeleteObject",
         "s3:GetObjectAcl",
         "s3:PutObjectAcl",
       ],
-      resources: ["*"],
+      resources: [bucket.arnForObjects("*")],
     });
 
     const user = new User(this, "MyUser", {
