@@ -1,5 +1,11 @@
 import * as cdk from "@aws-cdk/core";
-import { Bucket, BlockPublicAccess, BucketEncryption } from "@aws-cdk/aws-s3";
+import {
+  Bucket,
+  BlockPublicAccess,
+  BucketEncryption,
+  CfnBucket,
+  StorageClass,
+} from "@aws-cdk/aws-s3";
 import { CfnOutput, RemovalPolicy } from "@aws-cdk/core";
 import { Effect, ManagedPolicy, PolicyStatement, User } from "@aws-cdk/aws-iam";
 import iam = require("@aws-cdk/aws-iam");
@@ -14,6 +20,55 @@ export class PermissionBoundaryStack extends cdk.Stack {
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+      versioned: true,
+    });
+
+    // Now the access policy
+    const accessStatement1 = new iam.PolicyStatement({
+      actions: ["s3:GetReplicationConfiguration", "s3:ListBucket"],
+      resources: [bucket.bucketArn],
+    });
+
+    const accessStatement2 = new iam.PolicyStatement({
+      actions: [
+        "s3:GetObjectVersion",
+        "s3:GetObjectVersionAcl",
+        "s3:GetObjectVersionTagging",
+      ],
+      resources: [bucket.arnForObjects("*")],
+    });
+
+    const accessStatement3 = new iam.PolicyStatement({
+      actions: ["s3:ReplicateObject", "s3:ReplicateDelete", "s3:ReplicateTags"],
+      resources: ["arn:aws:s3:::stpierre-backup-2021/*"],
+    });
+
+    const accessPolicy = new iam.Policy(this, "AccessPolicy", {
+      statements: [accessStatement1, accessStatement2, accessStatement3],
+    });
+
+    const role = new iam.Role(this, "MyRole", {
+      assumedBy: new iam.ServicePrincipal("s3.amazonaws.com"),
+    });
+
+    // role.attachInlinePolicy(trustPolicy);
+    role.attachInlinePolicy(accessPolicy);
+
+    const lowLevelBucket = bucket.node.defaultChild as CfnBucket;
+
+    lowLevelBucket.addPropertyOverride("ReplicationConfiguration", {
+      Role: role.roleArn,
+      Rules: [
+        {
+          Id: "replicateEverything",
+          Destination: {
+            Bucket: "arn:aws:s3:::stpierre-backup-2021",
+            StorageClass: "GLACIER",
+          },
+          Prefix: "",
+          Status: "Enabled",
+        },
+      ],
     });
 
     const pb_default = new ManagedPolicy(this, "pb-default", {
